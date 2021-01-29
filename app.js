@@ -3,7 +3,21 @@ const handlebars = require('express-handlebars');
 const bodyParser  = require('body-parser');
 const path = require('path');
 const db  = require('./config/db');
-const gigsRoute = require('./routes/gigs')
+const gigsRoute = require('./routes/gigs');
+
+const app = express();
+
+//Handlebars
+app.engine('handlebars', handlebars({ defaultLayout: 'main', 
+    runtimeOptions: {
+        allowProtoPropertiesByDefault: true,
+        allowProtoMethodsByDefault: true,
+    }
+}));
+app.set('view engine', 'handlebars');
+
+//Set static folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 //Test DB
 db.authenticate()
@@ -14,10 +28,10 @@ db.authenticate()
         console.error(error);
     })
 
-const app = express();
 
+//Index view
 app.get('/', (request, response) => {
-    response.send('INDEX');
+    response.render('index', { layout: 'landing' });
 });
 
 //Gig routes
