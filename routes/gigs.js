@@ -1,7 +1,9 @@
+const { Sequelize } = require('sequelize');
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const Gig = require('../models/Gig');
+const Op = Sequelize.Op;
 
 //Get gig list
 router.get('/', (request, response) => {
@@ -23,29 +25,75 @@ router.get('/add', (request, response) => {
 
 //Add a gig
 router.post('/add', (request, response) => {
-    const data = {
-        title: 'Simple Wordpress site',
-        technologies: 'worldpress, php, html, css',
-        budget: '$1000',
-        description: 'We’re looking for an experienced JavaScript developer with excellent knowledge of client-side engineering using modern frameworks, preferably React. This is a mid-senior level role, and as such we’re looking for someone to provide technical guidance and mentorship to junior developers, and have active input into the design and technical decision making process.',
-        contact_email: 'maria@mail.com'
-    }
-    let { title, technologies, budget, description, contact_email} = data;
+    
+    let { title, technologies, budget, description, contact_email} = request.body;
 
-    //Insert into table
-    Gig.create({
-        title,
-        technologies,
-        description,
-        budget,
-        contact_email
-    })
-        .then((gig) => {
-            response.redirect('/gigs');
+    let errors = [];
+
+    if (!title) {
+        errors.push({ text: 'Please add a title' });
+    }
+
+    if (!technologies) {
+        errors.push({ text: 'Please add the technologies' });
+    }
+
+    if (!description) {
+        errors.push({ text: 'Please add a description' });
+    }
+
+    if (!contact_email) {
+        errors.push({ text: 'Please add the contact email' });
+    }
+
+    //Check for errors
+    if (errors.length > 0) {
+        response.render('add', {
+            errors,
+            title,
+            technologies,
+            description,
+            budget,
+            contact_email
+        });
+    } else {
+        //Insert into table
+        if (!budget) {
+            budget = 'Unknown';
+        } else {
+            budget = `$${budget}`;
+        }
+
+        technologies = technologies.toLowerCase().replace(/, /g, ',');
+
+        Gig.create({
+            title,
+            technologies,
+            description,
+            budget,
+            contact_email
+        })
+            .then((gig) => {
+                response.redirect('/gigs');
+            })
+            .catch((error) => {
+                console.log(error);
+            })
+    }
+});
+
+//Search for gigs
+router.get('/search', (request, response) => {
+    let { term } = request.query;
+    term = term.toLowerCase();
+
+    Gig.findAll({ where: { technologies: { [Op.like]:  '%' + term + '%'  } } })
+        .then((gigs) => {
+            response.render('gigs', { gigs });
         })
         .catch((error) => {
-            console.log(error);
-        })
+            console.error(error);
+        });
 });
 
 module.exports = router;
